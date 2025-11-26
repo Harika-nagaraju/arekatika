@@ -42,13 +42,14 @@ class _LoginScreenState extends State<LoginScreen> {
   bool get _canSendOtp => _validPhone && agreed;
 
   void _sendOtp() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => OtpVerificationScreen(
-          phoneNumber: phoneCtrl.text.trim(),
-        ),
-      ),
-    );
+    _authController.login(phoneCtrl.text.trim());
+    // Navigator.of(context).push(
+    //   MaterialPageRoute(
+    //     builder: (_) => OtpVerificationScreen(
+    //       phoneNumber: phoneCtrl.text.trim(),
+    //     ),
+    //   ),
+    // );
   }
 
   Future<void> _continueWithGoogle() async {
@@ -94,7 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final size = MediaQuery.of(context).size;
 
     // Increase/decrease this factor to control hero height
-    final double heroHeight = size.height * 0.42; // slightly reduced for better balance
+    final double heroHeight =
+        size.height * 0.42; // slightly reduced for better balance
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -274,10 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Text(
                         'Send OTP'.toUpperCase(),
-                        style: FontUtils.bold(
-                          size: 13,
-                          color: AppColors.white,
-                        ),
+                        style: FontUtils.bold(size: 13, color: AppColors.white),
                       ),
                     ),
                   ),
@@ -286,9 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Divider "Or"
                   Row(
                     children: [
-                      const Expanded(
-                        child: Divider(color: AppColors.gray2),
-                      ),
+                      const Expanded(child: Divider(color: AppColors.gray2)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Text(
@@ -297,48 +294,48 @@ class _LoginScreenState extends State<LoginScreen> {
                             size: 12,
                             color: AppColors.textTertiary,
                           ),
-                                                  ),
+                        ),
                       ),
-                      const Expanded(
-                        child: Divider(color: AppColors.gray2),
-                      ),
+                      const Expanded(child: Divider(color: AppColors.gray2)),
                     ],
                   ),
                   const SizedBox(height: 12),
 
                   // Continue with Google
-              Obx(() {
-  return SizedBox(
-    height: 48,
-    child: OutlinedButton.icon(
-      onPressed: _authController.isLoading.value ? null : _continueWithGoogle,
-      icon: Image.asset(
-        'assets/images/google.png',
-        width: 18,
-        height: 18,
-      ),
-      label: Text(
-        _authController.isLoading.value
-            ? 'Signing in...'
-            : 'Continue With Google',
-        style: FontUtils.bold(
-          size: 13,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        side: const BorderSide(
-          color: AppColors.stroke,
-          width: 1,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        backgroundColor: AppColors.white,
-      ),
-    ),
-  );
-}),
+                  Obx(() {
+                    return SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: _authController.isLoading.value
+                            ? null
+                            : _continueWithGoogle,
+                        icon: Image.asset(
+                          'assets/images/google.png',
+                          width: 18,
+                          height: 18,
+                        ),
+                        label: Text(
+                          _authController.isLoading.value
+                              ? 'Signing in...'
+                              : 'Continue With Google',
+                          style: FontUtils.bold(
+                            size: 13,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: AppColors.stroke,
+                            width: 1,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          backgroundColor: AppColors.white,
+                        ),
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 18),
 
                   // Powered by

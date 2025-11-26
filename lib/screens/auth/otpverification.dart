@@ -1,34 +1,35 @@
 import 'dart:async';
+import 'package:arekatika/controllers/auth_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:arekatika/utils/appcolors.dart';
 import 'package:arekatika/utils/fontutils.dart';
 import 'package:arekatika/widgets/custom_button.dart';
 import 'package:arekatika/widgets/otpinput.dart';
 import 'package:arekatika/screens/auth/signup.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:get/get_navigation/src/extension_navigation.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
-  final String phoneNumber;
-  final int otpLength;
   final int initialSeconds;
 
-  const OtpVerificationScreen({
-    Key? key,
-    required this.phoneNumber,
-    this.otpLength = 4,
-    this.initialSeconds = 30,
-  }) : super(key: key);
+  const OtpVerificationScreen({Key? key, this.initialSeconds = 30})
+    : super(key: key);
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+  final AuthController _authController = Get.put(AuthController());
+  final phone = Get.arguments["phone"];
+  final id = Get.arguments["id"];
   final TextEditingController _otpCtrl = TextEditingController();
   late int _secondsLeft = widget.initialSeconds;
   Timer? _timer;
   bool _verifying = false;
 
-  bool get _isComplete => _otpCtrl.text.length == widget.otpLength;
+  bool get _isComplete => _otpCtrl.text.length == 4;
 
   @override
   void initState() {
@@ -59,9 +60,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   void _resendOtp() {
     if (_secondsLeft > 0) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('OTP resent')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('OTP resent')));
     _startTimer();
   }
 
@@ -71,11 +72,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     await Future.delayed(const Duration(milliseconds: 800));
     setState(() => _verifying = false);
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const SignupScreen(),
-      ),
-    );
+
+    _authController.verifyOtp(phone, _otpCtrl.text);
+    // if (_otpCtrl.text == id.toString()) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('OTP Verified Successfully')),
+    //   );
+    //   Get.to(() => const SignupScreen());
+    // } else {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('Invalid OTP, please try again')),
+    //   );
+    //   return;
+    // }
   }
 
   String _format(int s) {
@@ -113,32 +122,47 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     children: [
                       IconButton(
                         onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            size: 18, color: AppColors.textPrimary),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 18,
+                          color: AppColors.textPrimary,
+                        ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
                       const SizedBox(width: 6),
-                      Text('Verify OTP',
-                          style: FontUtils.bold(
-                              size: 18, color: AppColors.textPrimary)),
+                      Text(
+                        'Verify OTP',
+                        style: FontUtils.bold(
+                          size: 18,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text('OTP Sent to ${widget.phoneNumber}',
-                      style: FontUtils.regular(
-                          size: 13, color: AppColors.textSecondary)),
+                  Text(
+                    'OTP Sent to ${phone}',
+                    style: FontUtils.regular(
+                      size: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 16),
 
                   // Enter OTP
-                  Text('Enter OTP',
-                      style: FontUtils.semiBold(
-                          size: 14, color: AppColors.textPrimary)),
+                  Text(
+                    'Enter OTP',
+                    style: FontUtils.semiBold(
+                      size: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Center(
                     child: OtpInput(
                       controller: _otpCtrl,
-                      length: widget.otpLength,
+                      length: 4,
                       boxSize: 44,
                       spacing: 10,
                       onCompleted: (_) => setState(() {}),
@@ -146,27 +170,35 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   ),
                   const SizedBox(height: 14),
 
-
                   // Timer + Resend
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.timer_outlined,
-                          size: 16, color: AppColors.textTertiary),
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 16,
+                        color: AppColors.textTertiary,
+                      ),
                       const SizedBox(width: 4),
-                      Text(_format(_secondsLeft),
-                          style: FontUtils.semiBold(
-                              size: 12, color: AppColors.textTertiary)),
+                      Text(
+                        _format(_secondsLeft),
+                        style: FontUtils.semiBold(
+                          size: 12,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
                       const SizedBox(width: 14),
                       GestureDetector(
                         onTap: _secondsLeft == 0 ? _resendOtp : null,
-                        child: Text('Resend OTP',
-                            style: FontUtils.bold(
-                              size: 12,
-                              color: _secondsLeft == 0
-                                  ? AppColors.brandGreen
-                                  : AppColors.textDisabled,
-                            )),
+                        child: Text(
+                          'Resend OTP',
+                          style: FontUtils.bold(
+                            size: 12,
+                            color: _secondsLeft == 0
+                                ? AppColors.brandGreen
+                                : AppColors.textDisabled,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -192,9 +224,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                         ),
                         const SizedBox(height: 4),
-                        Text('AREKATIKA',
-                            style: FontUtils.bold(
-                                size: 12, color: AppColors.textTertiary)),
+                        Text(
+                          'AREKATIKA',
+                          style: FontUtils.bold(
+                            size: 12,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -207,4 +243,3 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     );
   }
 }
-

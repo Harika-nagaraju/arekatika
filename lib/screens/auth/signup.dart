@@ -1,9 +1,13 @@
+import 'package:arekatika/controllers/auth_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:arekatika/utils/appcolors.dart';
 import 'package:arekatika/utils/fontutils.dart';
 import 'package:arekatika/widgets/custom_textfield.dart';
 import 'package:arekatika/widgets/custom_button.dart';
 import 'package:arekatika/screens/dashboard/dashboard.dart';
+import 'package:get/get_core/src/get_main.dart' show Get;
+import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:get/get_navigation/src/extension_navigation.dart';
 
 enum Gender { male, female, other }
 
@@ -19,6 +23,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _lastName = TextEditingController();
   final TextEditingController _email = TextEditingController();
   final TextEditingController _referral = TextEditingController();
+  final AuthController _authController = Get.put(AuthController());
+  final mobile = Get.arguments["mobile"];
   Gender? _gender = Gender.male;
   bool _submitting = false;
 
@@ -53,10 +59,18 @@ class _SignupScreenState extends State<SignupScreen> {
     await Future.delayed(const Duration(milliseconds: 800));
     setState(() => _submitting = false);
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const Dashboard()),
-      (route) => false,
+    _authController.updateKyc(
+      mobile: mobile,
+      firstName: _firstName.text.trim(),
+      lastName: _lastName.text.trim(),
+      email: _email.text.toString().trim(),
+      gender: _gender.toString().split('.').last,
+      referral: _referral.text.trim(),
     );
+    // Navigator.of(context).pushAndRemoveUntil(
+    //   MaterialPageRoute(builder: (_) => const Dashboard()),
+    //   (route) => false,
+    // );
   }
 
   @override
@@ -69,14 +83,22 @@ class _SignupScreenState extends State<SignupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Welcome', style: FontUtils.bold(size: 28, color: AppColors.textPrimary)),
+              Text(
+                'Welcome',
+                style: FontUtils.bold(size: 28, color: AppColors.textPrimary),
+              ),
               const SizedBox(height: 6),
-              Text('Tell Us a Little About Yourself',
-                  style: FontUtils.regular(size: 15, color: Colors.black54)),
+              Text(
+                'Tell Us a Little About Yourself',
+                style: FontUtils.regular(size: 15, color: Colors.black54),
+              ),
               const SizedBox(height: 28),
 
               // Full Name
-              Text('Full Name', style: FontUtils.regular(size: 13, color: Colors.black54)),
+              Text(
+                'Full Name',
+                style: FontUtils.regular(size: 13, color: Colors.black54),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -98,8 +120,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 22),
               // Email
-              Text('Email (optional)',
-                  style: FontUtils.regular(size: 13, color: Colors.black54)),
+              Text(
+                'Email (optional)',
+                style: FontUtils.regular(size: 13, color: Colors.black54),
+              ),
               const SizedBox(height: 10),
               CustomTextField(
                 controller: _email,
@@ -109,8 +133,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 22),
               // Gender
-              Text('Gender (optional)',
-                  style: FontUtils.regular(size: 13, color: Colors.black54)),
+              Text(
+                'Gender (optional)',
+                style: FontUtils.regular(size: 13, color: Colors.black54),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -139,8 +165,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 22),
               // Referral
-              Text('Referral Code (optional)',
-                  style: FontUtils.regular(size: 13, color: Colors.black54)),
+              Text(
+                'Referral Code (optional)',
+                style: FontUtils.regular(size: 13, color: Colors.black54),
+              ),
               const SizedBox(height: 10),
               CustomTextField(
                 controller: _referral,
@@ -170,7 +198,13 @@ class _SignupScreenState extends State<SignupScreen> {
                             valueColor: AlwaysStoppedAnimation(Colors.white),
                           ),
                         )
-                      : Text('SUBMIT', style: FontUtils.semiBold(size: 16, color: Colors.white)),
+                      : Text(
+                          'SUBMIT',
+                          style: FontUtils.semiBold(
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ],

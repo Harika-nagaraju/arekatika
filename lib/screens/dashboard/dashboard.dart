@@ -1,3 +1,4 @@
+import 'package:arekatika/helper/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:arekatika/controllers/bottom_nav_controller.dart';
@@ -30,6 +31,19 @@ class _DashboardState extends State<Dashboard> {
     Get.put<LocationController>(LocationController());
     Get.put<HomeSearchController>(HomeSearchController());
     Get.put<CartController>(CartController());
+    getLocation();
+  }
+
+  void getLocation() async {
+    bool granted = await PermissionHelper.requestLocationPermission();
+
+    if (granted) {
+      bool granted = await PermissionHelper.requestLocationPermission();
+      final pos = await PermissionHelper.getCurrentLocation();
+      print("Lat: ${pos.latitude}, Lng: ${pos.longitude}");
+    } else {
+      print("Permission Denied");
+    }
   }
 
   late final List<Widget> pages = [
@@ -54,9 +68,7 @@ class _DashboardState extends State<Dashboard> {
           backgroundColor: AppColors.bg,
           body: pages[navCtrl.selectedIndex.value],
           bottomNavigationBar: Theme(
-            data: Theme.of(context).copyWith(
-              canvasColor: Colors.white,
-            ),
+            data: Theme.of(context).copyWith(canvasColor: Colors.white),
             child: BottomNavigationBar(
               type: BottomNavigationBarType.fixed,
               selectedLabelStyle: FontUtils.semiBold(size: 10),
@@ -103,12 +115,21 @@ class _DashboardState extends State<Dashboard> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('Turn On Location', style: FontUtils.semiBold(size: 16, color: AppColors.textPrimary)),
+              Text(
+                'Turn On Location',
+                style: FontUtils.semiBold(
+                  size: 16,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 "We couldn't detect your area because GPS is turned off. Please enable location services to continue.",
                 textAlign: TextAlign.center,
-                style: FontUtils.regular(size: 12, color: AppColors.textSecondary),
+                style: FontUtils.regular(
+                  size: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -122,10 +143,15 @@ class _DashboardState extends State<Dashboard> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brandGreen,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     elevation: 0,
                   ),
-                  child: Text('Turn On GPS', style: FontUtils.bold(size: 14, color: Colors.white)),
+                  child: Text(
+                    'Turn On GPS',
+                    style: FontUtils.bold(size: 14, color: Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -149,14 +175,27 @@ class _DashboardState extends State<Dashboard> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Optional illustration space (kept placeholder icon to avoid missing asset)
-              const Icon(Icons.my_location, size: 64, color: AppColors.brandGreen),
+              const Icon(
+                Icons.my_location,
+                size: 64,
+                color: AppColors.brandGreen,
+              ),
               const SizedBox(height: 12),
-              Text('Enable Location Access', style: FontUtils.semiBold(size: 16, color: AppColors.textPrimary)),
+              Text(
+                'Enable Location Access',
+                style: FontUtils.semiBold(
+                  size: 16,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 'We use your location to find the nearest delivery area and ensure your fresh meat reaches you on time.',
                 textAlign: TextAlign.center,
-                style: FontUtils.regular(size: 12, color: AppColors.textSecondary),
+                style: FontUtils.regular(
+                  size: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -170,10 +209,15 @@ class _DashboardState extends State<Dashboard> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brandGreen,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     elevation: 0,
                   ),
-                  child: Text('Use Current Location', style: FontUtils.bold(size: 14, color: Colors.white)),
+                  child: Text(
+                    'Use Current Location',
+                    style: FontUtils.bold(size: 14, color: Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -188,17 +232,28 @@ class _DashboardState extends State<Dashboard> {
                       isScrollControlled: true,
                       useSafeArea: true,
                       shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
                       ),
-                      builder: (_) => SelectDeliveryLocationSheet(onAddNew: () {}),
+                      builder: (_) =>
+                          SelectDeliveryLocationSheet(onAddNew: () {}),
                     );
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.stroke),
                     foregroundColor: AppColors.textPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: Text('Search Your Location', style: FontUtils.bold(size: 14, color: AppColors.textPrimary)),
+                  child: Text(
+                    'Search Your Location',
+                    style: FontUtils.bold(
+                      size: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -213,9 +268,7 @@ class _DashboardState extends State<Dashboard> {
       context: context,
       barrierDismissible: true,
       builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 32),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
