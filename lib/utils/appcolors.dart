@@ -25,6 +25,9 @@ class AppColors {
   static const Color brandPurple = Color(0xFF9333EA);
   static const Color teal = Color(0xFF00B7C6); // Optional accent
   static const Color cyan = Color(0xFF00C6FF); // Optional accent
+  // In lib/utils/appcolors.dart
+  static const Color errorRed = Color(0xFFE74C3C);
+  static const Color errorLightRed = Color(0xFFFDEDEE);
 
   // ======= Text =======
   static const Color textPrimary = Color(0xFF111827); // Titles / strong text

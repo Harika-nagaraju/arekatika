@@ -1,78 +1,83 @@
+// lib/helper/dio_helpers.dart
+import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 class DioHelper {
-  static final Dio dio = Dio(
+  static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: "https://apocatastatic-leisa-nonmonistic.ngrok-free.dev/",
-      connectTimeout: Duration(seconds: 15),
-      receiveTimeout: Duration(seconds: 15),
-      headers: {"Content-Type": "application/json"},
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE, HEAD",
+        "Access-Control-Allow-Headers": "Origin, Content-Type, X-Auth-Token",
+      },
+      responseType: ResponseType.json,
     ),
-  );
+  )..interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        if (kDebugMode) {
+          print('🌐 Sending request to ${options.path}');
+          print('📦 Request data: ${options.data}');
+        }
+        return handler.next(options);
+      },
+      onResponse: (response, handler) {
+        if (kDebugMode) {
+          print('✅ Response from ${response.requestOptions.path}');
+          print('📦 Response data: ${response.data}');
+        }
+        return handler.next(response);
+      },
+      onError: (DioException e, handler) async {
+        if (kDebugMode) {
+          print('❌ Error: ${e.message}');
+          print('❌ Error response: ${e.response?.data}');
+        }
+        return handler.next(e);
+      },
+    ));
 
+  // Add this method back
   static void setToken(String token) {
-    dio.options.headers["Authorization"] = "Bearer $token";
-  }
-
-  static void initInterceptor() {
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          print("➡️ REQUEST: ${options.method} ${options.uri}");
-          print("Headers: ${options.headers}");
-          print("Data: ${options.data}");
-          return handler.next(options);
-        },
-        onResponse: (response, handler) {
-          print("✔️ RESPONSE: ${response.statusCode}");
-          return handler.next(response);
-        },
-        onError: (error, handler) {
-          print("❌ ERROR: $error");
-          return handler.next(error);
-        },
-      ),
-    );
-  }
-
-  // GET Request
-  static Future<Response> getData({
-    required String endpoint,
-    Map<String, dynamic>? query,
-  }) async {
-    try {
-      return await dio.get(endpoint, queryParameters: query);
-    } catch (e) {
-      throw Exception("GET ERROR: $e");
+    _dio.options.headers['Authorization'] = 'Bearer $token';
+    if (kDebugMode) {
+      print('🔑 Token set in headers: ${_dio.options.headers}');
     }
   }
 
-  // POST Request
+  // Add this getter for the Dio instance
+  static Dio get dio => _dio;
+
   static Future<Response> postData({
     required String endpoint,
-    Map<String, dynamic>? body,
+    required Map<String, dynamic> body,
   }) async {
     try {
-      return await dio.post(endpoint, data: body);
-    } catch (e) {
-      throw Exception("POST ERROR: $e");
-    }
-  }
-
-  // File Upload
-  static Future<Response> uploadFile({
-    required String endpoint,
-    required String fieldName,
-    required String filePath,
-  }) async {
-    try {
-      FormData formData = FormData.fromMap({
-        fieldName: await MultipartFile.fromFile(filePath),
-      });
-
-      return await dio.post(endpoint, data: formData);
-    } catch (e) {
-      throw Exception("UPLOAD ERROR: $e");
+      final response = await _dio.post<dynamic>(
+        endpoint,
+        data: body,
+        options: Options(
+          responseType: ResponseType.json,
+          followRedirects: false,
+          validateStatus: (status) => status! < 500,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE, HEAD",
+            "Access-Control-Allow-Headers": "Origin, Content-Type, X-Auth-Token",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+        ),
+      );
+      return response;
+    } on DioException catch (e) {
+      rethrow;
     }
   }
 }

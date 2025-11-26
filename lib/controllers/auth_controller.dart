@@ -1,10 +1,15 @@
-import 'package:arekatika/screens/auth/otpverification.dart';
-import 'package:arekatika/screens/auth/signup.dart';
+// lib/controllers/auth_controller.dart
+
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import 'package:arekatika/screens/dashboard/dashboard.dart';
+
+import 'package:arekatika/utils/appcolors.dart';
 import 'package:arekatika/helper/dio_helpers.dart';
 import 'package:arekatika/helper/pref_helper.dart';
+import 'package:arekatika/screens/auth/otpverification.dart';
+import 'package:arekatika/screens/auth/signup.dart';
+import 'package:arekatika/screens/dashboard/dashboard.dart';
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -12,45 +17,104 @@ class AuthController extends GetxController {
   var token = "".obs;
   var error = "".obs;
 
+  // -------------------------------------------------------------
+  // GOOGLE SIGN-IN
+  // -------------------------------------------------------------
   Future<void> signInWithGoogle() async {
-    if (isLoading.value) return;
     try {
-      isLoading.value = true;
-      await Future.delayed(const Duration(seconds: 1));
+      loading.value = true;
+
+      // TODO: Replace with actual Google Sign-In logic.
+      // Current behavior: Navigate directly to dashboard.
       Get.offAll(() => const Dashboard());
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to sign in with Google',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorRed,
+        colorText: Colors.white,
+      );
+      rethrow;
     } finally {
-      isLoading.value = false;
+      loading.value = false;
     }
   }
 
+  // -------------------------------------------------------------
+  // LOGIN (SEND OTP) - improved with response validation & better error handling
+  // -------------------------------------------------------------
   Future<void> login(String mobile) async {
     loading.value = true;
     error.value = "";
 
     try {
-      final res = await DioHelper.postData(
+      print('🔄 Attempting to login with mobile: $mobile');
+      
+      final response = await DioHelper.postData(
         endpoint: "auth/login",
         body: {"mobileNumber": mobile},
       );
 
-      var mobileNumber = res.data['mobileNumber'];
-      var otp = res.data['otp'];
+      print('✅ Login response received: ${response.data}');
 
-      print(res.data);
+      // Check if the response contains the expected data
+      if (response.data != null &&
+          response.data['mobileNumber'] != null &&
+          response.data['otp'] != null) {
+        
+        final mobileNumber = response.data['mobileNumber'].toString();
+        final otp = response.data['otp'].toString();
+
+        print('📱 Mobile: $mobileNumber, OTP: $otp');
+        
+        loading.value = false;
+
+        Get.to(
+          () => OtpVerificationScreen(),
+          arguments: {"phone": mobileNumber.trim(), "id": otp},
+        );
+      } else {
+        throw Exception('❌ Invalid response format from server: ${response.data}');
+      }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data?['message'] ??
+                         e.response?.statusMessage ??
+                         e.message ??
+                         'Failed to connect to the server. Please check your internet connection.';
+      
       loading.value = false;
+      error.value = errorMessage;
 
-      // Navigate to Home
-      Get.to(
-        () => OtpVerificationScreen(),
-        arguments: {"phone": mobileNumber.trim(), "id": otp},
+      print('❌ Login error: $errorMessage');
+      
+      Get.snackbar(
+        'Login Failed',
+        errorMessage,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorRed,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
       );
     } catch (e) {
       loading.value = false;
-      error.value = "Login failed: $e";
-      print(error.value);
+      error.value = 'An unexpected error occurred: $e';
+      print('❌ Unexpected error: $e');
+      
+      Get.snackbar(
+        'Error',
+        error.value,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorRed,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
     }
   }
 
+  // -------------------------------------------------------------
+  // VERIFY OTP
+  // -------------------------------------------------------------
   Future<void> verifyOtp(String mobile, String otpvalue) async {
     loading.value = true;
     error.value = "";
@@ -62,44 +126,48 @@ class AuthController extends GetxController {
       );
 
       loading.value = false;
-      // print("✅ OTP Verified: ${res.data}");
-      // {message: OTP verified successfully, user: {id: 6921f4377ac7bdfa4e73ca29, firstName: null, lastName: null, email: null, mobileNumber: 9395148149, kyc: false}}
 
-      if (res.data['user']['kyc'] == true) {
-        String? token = res.data['token'];
-        if (token != null) {
-          DioHelper.setToken(token);
-          PrefHelper.saveString("token", token);
+      if (res.data['message'] == 'OTP verified successfully') {
+        if (res.data['user']['kyc'] == true) {
+          String? tokenValue = res.data['token'];
+          if (tokenValue != null) {
+            DioHelper.setToken(tokenValue);
+            PrefHelper.saveString("token", tokenValue);
+          }
+          Get.offAll(() => const Dashboard());
+        } else {
+          Get.offAll(() => SignupScreen(), arguments: {"mobile": mobile});
         }
-        Get.offAll(() => const Dashboard());
-        return;
       } else {
-        Get.offAll(() => SignupScreen(), arguments: {"mobile": mobile});
+        throw Exception('Incorrect OTP. Please try again.');
       }
-    } catch (e) {
+    } on DioException catch (e) {
       loading.value = false;
 
-      if (e is DioException) {
-        print("❌ Status: ${e.response?.statusCode}");
-        print("❌ Error Response: ${e.response?.data}");
-        print("❌ URL: ${e.requestOptions.uri}");
+      String errorMessage = 'Failed to verify OTP. Please try again.';
+      if (e.response?.statusCode == 400) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
       }
 
-      error.value = "Login failed: $e";
+      throw Exception(errorMessage);
+    } catch (e) {
+      loading.value = false;
+      rethrow;
     }
   }
 
+  // -------------------------------------------------------------
+  // UPDATE KYC
+  // -------------------------------------------------------------
   Future<bool> updateKyc({
     required String mobile,
     required String firstName,
     required String lastName,
     required String email,
     required String gender,
-    required String referral,
+    String? referral,
   }) async {
     loading.value = true;
-    error.value = "";
-
     try {
       final res = await DioHelper.postData(
         endpoint: "auth/update-kyc",
@@ -109,36 +177,29 @@ class AuthController extends GetxController {
           "lastName": lastName,
           "email": email,
           "gender": gender,
-          "reffaral": referral,
+          if (referral != null && referral.isNotEmpty) "referral": referral,
         },
       );
 
-      loading.value = false;
-      print("KYC Updated: ${res.data}");
-
-      String? token = res.data['token'];
-      if (token != null) {
+      if (res.data['token'] != null) {
+        final token = res.data['token'];
         DioHelper.setToken(token);
         PrefHelper.saveString("token", token);
+        return true;
       }
 
-      // Check success status
-      bool status = res.data["status"] ?? true;
-      if (status) {
-        Get.offAll(() => const Dashboard());
-      }
-
-      return status; // return true or false
-    } catch (e) {
-      loading.value = false;
-
-      if (e is DioException) {
-        print("❌ Status: ${e.response?.statusCode}");
-        print("❌ Response: ${e.response?.data}");
-      }
-
-      error.value = "KYC Update failed: $e";
       return false;
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to update profile',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorRed,
+        colorText: Colors.white,
+      );
+      rethrow;
+    } finally {
+      loading.value = false;
     }
   }
 }

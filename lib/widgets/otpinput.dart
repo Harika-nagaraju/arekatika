@@ -4,13 +4,13 @@ import 'package:arekatika/utils/appcolors.dart';
 import 'package:arekatika/utils/fontutils.dart';
 
 class OtpInput extends StatefulWidget {
-  final int length; // number of boxes (e.g., 4 / 6)
-  final ValueChanged<String>? onChanged; // fires on every change
-  final ValueChanged<String>? onCompleted; // fires when filled
-  final double boxSize; // width/height of each box
-  final double spacing; // space between boxes
+  final int length;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onCompleted;
+  final double boxSize;
+  final double spacing;
   final TextEditingController? controller;
-  final bool error; // highlights error state
+  final bool error;
 
   const OtpInput({
     Key? key,
@@ -41,6 +41,15 @@ class _OtpInputState extends State<OtpInput> {
   }
 
   @override
+  void didUpdateWidget(covariant OtpInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _controller.removeListener(_handleChange);
+      _controller.addListener(_handleChange);
+    }
+  }
+
+  @override
   void dispose() {
     _controller.removeListener(_handleChange);
     if (widget.controller == null) _controller.dispose();
@@ -59,7 +68,6 @@ class _OtpInputState extends State<OtpInput> {
 
   @override
   Widget build(BuildContext context) {
-    // Hidden text field captures all input; boxes show the characters.
     return GestureDetector(
       onTap: () => _focusNode.requestFocus(),
       child: Stack(
@@ -76,7 +84,6 @@ class _OtpInputState extends State<OtpInput> {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(widget.length),
               ],
-              // Keep font to ensure consistent metrics even when invisible
               style: FontUtils.regular(size: 16, color: AppColors.textPrimary),
               decoration: const InputDecoration(border: InputBorder.none),
               autofocus: false,
@@ -99,40 +106,35 @@ class _OtpInputState extends State<OtpInput> {
                 ),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: widget.error
-                        ? AppColors.error
-                        : (isCurrent ? AppColors.brandGreen : AppColors.stroke),
-                    width: widget.error ? 1.5 : (isCurrent ? 1.5 : 1),
+                    color: widget.error 
+                      ? AppColors.errorRed
+                      : isFilled 
+                        ? AppColors.brandGreen 
+                        : AppColors.stroke,
+                    width: widget.error ? 1.5 : 1,
                   ),
+                  borderRadius: BorderRadius.circular(8),
+                  color: widget.error 
+                    ? AppColors.errorLightRed.withOpacity(0.1)
+                    : AppColors.white,
                 ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 120),
-                  child: isFilled
-                      ? Text(
-                          _value[i],
-                          key: ValueKey('v$i'),
-                          style: FontUtils.bold(
-                            size: 18,
-                            color: AppColors.textPrimary,
-                          ),
-                        )
-                      : (showCursor
-                            ? _BlinkingCursor(
-                                key: ValueKey('c$i'),
-                                height: 18,
-                                color: AppColors.brandGreen,
-                              )
-                            : Text(
-                                '',
-                                key: ValueKey('e$i'),
-                                style: FontUtils.bold(
-                                  size: 18,
-                                  color: AppColors.textPrimary,
-                                ),
-                              )),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (isFilled)
+                      Text(
+                        _value[i],
+                        style: FontUtils.bold(
+                          size: 18,
+                          color: widget.error 
+                            ? AppColors.errorRed 
+                            : AppColors.textPrimary,
+                        ),
+                      )
+                    else if (showCursor)
+                      const _BlinkingCursor(),
+                  ],
                 ),
               );
             }),
@@ -144,10 +146,7 @@ class _OtpInputState extends State<OtpInput> {
 }
 
 class _BlinkingCursor extends StatefulWidget {
-  final double height;
-  final Color color;
-  const _BlinkingCursor({Key? key, required this.height, required this.color})
-    : super(key: key);
+  const _BlinkingCursor({Key? key}) : super(key: key);
 
   @override
   State<_BlinkingCursor> createState() => _BlinkingCursorState();
@@ -155,22 +154,32 @@ class _BlinkingCursor extends StatefulWidget {
 
 class _BlinkingCursorState extends State<_BlinkingCursor>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ac = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
+  }
 
   @override
   void dispose() {
-    _ac.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
-      opacity: _ac.drive(Tween(begin: 1.0, end: 0.2)),
-      child: Container(width: 2, height: widget.height, color: widget.color),
+      opacity: _controller,
+      child: Container(
+        width: 2,
+        height: 24,
+        color: AppColors.brandGreen,
+      ),
     );
   }
 }

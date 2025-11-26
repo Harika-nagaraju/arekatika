@@ -6,9 +6,7 @@ import 'package:arekatika/utils/fontutils.dart';
 import 'package:arekatika/widgets/custom_button.dart';
 import 'package:arekatika/widgets/otpinput.dart';
 import 'package:arekatika/screens/auth/signup.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_instance/src/extension_instance.dart';
-import 'package:get/get_navigation/src/extension_navigation.dart';
+import 'package:get/get.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final int initialSeconds;
@@ -21,13 +19,15 @@ class OtpVerificationScreen extends StatefulWidget {
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-  final AuthController _authController = Get.put(AuthController());
+  final AuthController _authController = Get.find<AuthController>();
   final phone = Get.arguments["phone"];
   final id = Get.arguments["id"];
   final TextEditingController _otpCtrl = TextEditingController();
   late int _secondsLeft = widget.initialSeconds;
   Timer? _timer;
   bool _verifying = false;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   bool get _isComplete => _otpCtrl.text.length == 4;
 
@@ -35,7 +35,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void initState() {
     super.initState();
     _startTimer();
-    _otpCtrl.addListener(() => setState(() {}));
+    _otpCtrl.addListener(() {
+      if (_hasError) {
+        setState(() => _hasError = false);
+      }
+    });
   }
 
   @override
@@ -60,31 +64,107 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   void _resendOtp() {
     if (_secondsLeft > 0) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('OTP resent')));
-    _startTimer();
+    _authController.login(phone).then((_) {
+      _startTimer();
+      Get.snackbar(
+        'Success',
+        'OTP resent successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.brandGreen,
+        colorText: Colors.white,
+      );
+    }).catchError((e) {
+      Get.snackbar(
+        'Error',
+        'Failed to resend OTP',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.errorRed,
+        colorText: Colors.white,
+      );
+    });
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.errorRed,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Incorrect OTP',
+              style: FontUtils.bold(
+                size: 18,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: FontUtils.regular(
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'TRY AGAIN',
+                  style: FontUtils.bold(
+                    size: 14,
+                    color: AppColors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        contentPadding: const EdgeInsets.all(24),
+      ),
+    );
   }
 
   Future<void> _verify() async {
     if (!_isComplete) return;
-    setState(() => _verifying = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    setState(() => _verifying = false);
-    if (!mounted) return;
+    
+    setState(() {
+      _verifying = true;
+      _hasError = false;
+    });
 
-    _authController.verifyOtp(phone, _otpCtrl.text);
-    // if (_otpCtrl.text == id.toString()) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('OTP Verified Successfully')),
-    //   );
-    //   Get.to(() => const SignupScreen());
-    // } else {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('Invalid OTP, please try again')),
-    //   );
-    //   return;
-    // }
+    try {
+      await _authController.verifyOtp(phone, _otpCtrl.text);
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      });
+      _showErrorDialog(_errorMessage);
+    } finally {
+      if (mounted) {
+        setState(() => _verifying = false);
+      }
+    }
   }
 
   String _format(int s) {
@@ -100,7 +180,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background hero image to mimic screenshot backdrop
+          // Background hero image
           Image.asset('assets/images/login.png', fit: BoxFit.cover),
           // Dim overlay
           Container(color: AppColors.overlayStrong),
@@ -142,7 +222,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'OTP Sent to ${phone}',
+                    'OTP Sent to $phone',
                     style: FontUtils.regular(
                       size: 13,
                       color: AppColors.textSecondary,
@@ -165,7 +245,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       length: 4,
                       boxSize: 44,
                       spacing: 10,
-                      onCompleted: (_) => setState(() {}),
+                      onCompleted: (_) => _verify(),
+                      error: _hasError,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -211,10 +292,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     isLoading: _verifying,
                     borderRadius: 8,
                     height: 44,
+                    buttonColor: _hasError ? AppColors.errorRed : AppColors.brandGreen,
                   ),
 
                   const SizedBox(height: 12),
-                  // Footer logo mimic
+                  // Footer logo
                   Center(
                     child: Column(
                       children: [
