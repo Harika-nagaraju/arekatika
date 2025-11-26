@@ -7,6 +7,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await PrefHelper.init(); // Initialize PrefHelper
   runApp(const MyApp());
+  
 }
 
 class MyApp extends StatelessWidget {
