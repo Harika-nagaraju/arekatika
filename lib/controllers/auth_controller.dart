@@ -136,7 +136,7 @@ class AuthController extends GetxController {
           }
           Get.offAll(() => const Dashboard());
         } else {
-          Get.offAll(() => SignupScreen(), arguments: {"mobile": mobile});
+          Get.offAll(() => SignUpScreen(), arguments: {"mobile": mobile});
         }
       } else {
         throw Exception('Incorrect OTP. Please try again.');

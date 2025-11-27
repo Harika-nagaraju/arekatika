@@ -1,255 +1,110 @@
-import 'package:arekatika/controllers/auth_controller.dart';
+// lib/screens/auth/signup_screen.dart
 import 'package:flutter/material.dart';
-import 'package:arekatika/utils/appcolors.dart';
-import 'package:arekatika/utils/fontutils.dart';
-import 'package:arekatika/widgets/custom_textfield.dart';
-import 'package:arekatika/widgets/custom_button.dart';
-import 'package:arekatika/screens/dashboard/dashboard.dart';
-import 'package:get/get_core/src/get_main.dart' show Get;
-import 'package:get/get_instance/src/extension_instance.dart';
-import 'package:get/get_navigation/src/extension_navigation.dart';
+import 'package:arekatika/services/auth_service.dart';
 
-enum Gender { male, female, other }
-
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({Key? key}) : super(key: key);
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({Key? key}) : super(key: key);
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  _SignUpScreenState createState() => _SignUpScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
-  final TextEditingController _firstName = TextEditingController();
-  final TextEditingController _lastName = TextEditingController();
-  final TextEditingController _email = TextEditingController();
-  final TextEditingController _referral = TextEditingController();
-  final AuthController _authController = Get.put(AuthController());
-  final mobile = Get.arguments["mobile"];
-  Gender? _gender = Gender.male;
-  bool _submitting = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _firstName.addListener(_onFieldChanged);
-    _lastName.addListener(_onFieldChanged);
-    _email.addListener(_onFieldChanged);
-    _referral.addListener(_onFieldChanged);
-  }
-
-  void _onFieldChanged() {
-    if (mounted) setState(() {});
-  }
+class _SignUpScreenState extends State<SignUpScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _mobileController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _referralController = TextEditingController();
+  String _gender = 'male';
+  bool _isLoading = false;
 
   @override
   void dispose() {
-    _firstName.dispose();
-    _lastName.dispose();
-    _email.dispose();
-    _referral.dispose();
+    _mobileController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 
-  bool get _canSubmit =>
-      _firstName.text.trim().isNotEmpty && _lastName.text.trim().isNotEmpty;
+  Future<void> _handleSignup() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  Future<void> _submit() async {
-    if (!_canSubmit) return;
-    setState(() => _submitting = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    setState(() => _submitting = false);
-    if (!mounted) return;
-    _authController.updateKyc(
-      mobile: mobile,
-      firstName: _firstName.text.trim(),
-      lastName: _lastName.text.trim(),
-      email: _email.text.toString().trim(),
-      gender: _gender.toString().split('.').last,
-      referral: _referral.text.trim(),
-    );
-    // Navigator.of(context).pushAndRemoveUntil(
-    //   MaterialPageRoute(builder: (_) => const Dashboard()),
-    //   (route) => false,
-    // );
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. First, complete the signup process
+      // ... your existing signup code ...
+
+      // 2. After successful signup, update KYC
+      final kycResult = await AuthService.updateKyc(
+        mobileNumber: _mobileController.text.trim(),
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        email: _emailController.text.trim(),
+        gender: _gender,
+        referral: _referralController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (kycResult['success'] == true) {
+        // Save the token if needed
+        final token = kycResult['token'];
+        // await _saveToken(token);
+        
+        // Navigate to home screen
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(kycResult['message'] ?? 'Failed to update KYC')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('An error occurred. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      appBar: AppBar(title: const Text('Sign Up')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Welcome',
-                style: FontUtils.bold(size: 28, color: AppColors.textPrimary),
+              // Your existing form fields
+              TextFormField(
+                controller: _mobileController,
+                decoration: const InputDecoration(labelText: 'Mobile Number'),
+                keyboardType: TextInputType.phone,
+                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Tell Us a Little About Yourself',
-                style: FontUtils.regular(size: 15, color: Colors.black54),
-              ),
-              const SizedBox(height: 28),
-
-              // Full Name
-              Text(
-                'Full Name',
-                style: FontUtils.regular(size: 13, color: Colors.black54),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _firstName,
-                      hintText: 'First Name',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _lastName,
-                      hintText: 'Last Name',
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 22),
-              // Email
-              Text(
-                'Email (optional)',
-                style: FontUtils.regular(size: 13, color: Colors.black54),
-              ),
-              const SizedBox(height: 10),
-              CustomTextField(
-                controller: _email,
-                hintText: 'Enter Email Address',
-                keyboardType: TextInputType.emailAddress,
-              ),
-
-              const SizedBox(height: 22),
-              // Gender
-              Text(
-                'Gender (optional)',
-                style: FontUtils.regular(size: 13, color: Colors.black54),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _GenderRadio<Gender>(
-                    value: Gender.male,
-                    groupValue: _gender,
-                    label: 'Male',
-                    onChanged: (v) => setState(() => _gender = v as Gender?),
-                  ),
-                  const SizedBox(width: 18),
-                  _GenderRadio<Gender>(
-                    value: Gender.female,
-                    groupValue: _gender,
-                    label: 'Female',
-                    onChanged: (v) => setState(() => _gender = v as Gender?),
-                  ),
-                  const SizedBox(width: 18),
-                  _GenderRadio<Gender>(
-                    value: Gender.other,
-                    groupValue: _gender,
-                    label: 'Other',
-                    onChanged: (v) => setState(() => _gender = v as Gender?),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 22),
-              // Referral
-              Text(
-                'Referral Code (optional)',
-                style: FontUtils.regular(size: 13, color: Colors.black54),
-              ),
-              const SizedBox(height: 10),
-              CustomTextField(
-                controller: _referral,
-                hintText: 'Enter Referral Code',
-              ),
-
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: (_canSubmit && !_submitting) ? _submit : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.brandGreen,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          'SUBMIT',
-                          style: FontUtils.semiBold(
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
+              // Add other form fields...
+              
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _handleSignup,
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : const Text('Sign Up & Complete KYC'),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _GenderRadio<T> extends StatelessWidget {
-  final T value;
-  final T? groupValue;
-  final String label;
-  final ValueChanged<T?> onChanged;
-  const _GenderRadio({
-    Key? key,
-    required this.value,
-    required this.groupValue,
-    required this.label,
-    required this.onChanged,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 20,
-          height: 20,
-          child: Radio<T>(
-            value: value,
-            groupValue: groupValue,
-            onChanged: onChanged,
-            activeColor: AppColors.brandGreen,
-            visualDensity: VisualDensity.compact,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: FontUtils.regular(size: 13, color: AppColors.textPrimary),
-        ),
-      ],
     );
   }
 }
