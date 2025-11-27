@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 class DioHelper {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: "https://apocatastatic-leisa-nonmonistic.ngrok-free.dev/",
+      baseUrl: "http://13.232.231.25:3000/",
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       headers: {
@@ -15,9 +15,12 @@ class DioHelper {
         "Accept": "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE, HEAD",
-        "Access-Control-Allow-Headers": "Origin, Content-Type, X-Auth-Token",
+        "Access-Control-Allow-Headers": "Origin, Content-Type, X-Auth-Token, Authorization",
+        "Access-Control-Allow-Credentials": "true"
       },
       responseType: ResponseType.json,
+      followRedirects: false,
+      validateStatus: (status) => status! < 500,
     ),
   )..interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
